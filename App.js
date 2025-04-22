@@ -66,10 +66,86 @@ useEffect(() => {
 // The second parenthesis, the arrow, and the curly bracket: This is a function written in modern JavaScript syntax. It's the same as this more familiar syntax: function(){...}. The ... inside the curly bracket contains the function body. 
 // The second argument, the dependency array, is enclosed by []. [] means: run this only once, after the component first renders (like componentDidMount in class components). If you put [someVar], it means: run it whenever someVar changes.
 
+    registerForPushNotificationsAsync();
+    // What: Calls the function that requests permission and gets the push token.
+    // Why: This is how the app gets permission to send notifications and retrieves the unique token to identify the device.
+    
+    const subscription = Notifications.addNotificationReceivedListener(notification => {
+        console.log('Notification received!', notification);
+        alert("There is a notification "+notification);
+    });
+    // What: Listens for incoming notifications while the app is running in the foreground.
+    // Why: Logs and alerts the user when a notification is received. This makes sure notifications are handled even when the app is open.
+    // What is this syntax (notification => {})?
+    // This means: A function that takes one argument called notification, and runs the code inside the { ... } when it’s called.
+    // Why use this weird syntax? 
+    // It’s shorter and easier to write inline. You don’t have to:
+    // -Declare a separate function
+    // -Come up with a name
+    // -Pass it in separately
 
+    return () => {
+        subscription.remove();
+      };
+    // What: Cleanup function that removes the notification listener.
+    // Why: Prevents memory leaks by unsubscribing the listener when the component unmounts.
+    // Is this another arrow function? Why is it in the return statement? Why can't it be a separate line? 
+    // React expects that if your useEffect needs to clean something up, you return a function. React will store that returned function and call it later when it is unmounted. The listener is not supposed to be removed the whole time the App is running. If the cleanup function is outside return (), it will run right after the listener is set up. 
 
+}, []);
+// What: The dependency array for useEffect.
+// Why: An empty array means the effect only runs once—when the component mounts.
+const registerForPushNotificationsAsync = async () => {
+    // What: Defines an asynchronous function to handle permissions and get the device token.
+    // Why: This wraps the logic for setting up push notifications in a reusable, clean function
+    // Why is this defined outside of useEffect()? 
+    // First, this function is long. So defining it outside makes it easier to read. Second, defining it outside allows it to be called outside (code declaration scope problem). 
+        
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        // What: Checks current notification permission status.
+        // Why: If permissions are already granted, no need to ask again.
+        // What is status:existingStatus. I don't understand the syntax again. 
+        // The function "getPermissionAsync()" returns an object with many variables. One of them is named "status". This line gets the "status" variable out from the output of the getPermissionAsync() function. 
+        // The ":existingStatus" part is a short cut to store the value of "status" to a new variable named "existingStatus". This is called "object destructuring with renaming"
+        
+        let finalStatus = existingStatus;
+        if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+        // What: Requests notification permission if not already granted.
+        // Why: Ensures the app can only proceed if the user allows notifications.
+        // What is this let syntax? 
+        // Let is a way to create variable, like "const". But unlike "const", variables created by "let" can be altered later. It is the "var" way in old style. 
+        // Also, "let" and "const" are block-scoped, meaning that they can't be accessed outside the block (e.g. if, for). But "var" is function-scoped. It can be declared and accessed anywhere within a function. 
+        // Why does it try to get permission twice? 
+        // The "getPermissionsAsync()" only learn about whether this app has the permission. It does not show a popup to the user. 
+        // In the "requestPermissionsAsync()", when the App does not have a permission, it ask the user for it. 
 
-})
+        const token = (await Notifications.getExpoPushTokenAsync()).data;
+        // What: Retrieves the Expo push token.
+        // Why: This token uniquely identifies the device and is needed to send push notifications to it.
 
+        console.log('Push Notification Token:', token);
+        // What: Logs the token.
+        // Why: Useful for development and debugging—this token can be used to test push notifications.
+};
 
-}
+return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text>Welcome to Firebase Messaging App!</Text>
+    </View>
+  );
+// What: The main UI of the app.
+// Why: Displays a simple message in the center of the screen. Basic user interface.
+
+}; 
+// What: Closes the App component definition.
+
+export default App;
+// What: Exports the App component as the default export.
+// Why: This allows the component to be rendered by React Native when the app runs.
+// What is the export command here? Why not return? 
+// The export command is used to make a function, object, or variable available for use in other files.
+// What is the "default" command here? What does it do? 
+// It helps specify the default export from a module, which can be imported without needing to know the exact name of the exported value
